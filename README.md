@@ -1,213 +1,678 @@
-# Django + PostgreSQL + Nginx в Docker
+# Terraform AWS Infrastructure
 
-Цей проєкт демонструє розгортання веб-застосунку Django з базою даних PostgreSQL та веб-сервером Nginx в Docker контейнерах.
+Цей проект налаштовує базову інфраструктуру AWS за допомогою Terraform, включаючи:
+- S3 бакет для зберігання Terraform state файлів з версіюванням
+- DynamoDB таблицю для блокування state файлів
+- VPC з публічними та приватними підмережами (3-зональна архітектура)
+- ECR репозиторій для Docker образів з автоматичним скануванням
 
-## 📋 Структура проєкту
+## Загальна архітектура
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         AWS Infrastructure                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │               Terraform State Backend                       │  │
+│  │  ┌────────────────────┐    ┌──────────────────────┐         │  │
+│  │  │  S3 Bucket         │    │  DynamoDB Table      │         │  │
+│  │  │  - State files     │◄───┤  - State locking    │         │  │
+│  │  │  - Versioning ON   │    │  - PAY_PER_REQUEST   │         │  │
+│  │  │  - Encryption      │    └──────────────────────┘         │  │
+│  │  └────────────────────┘                                     │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │                    VPC Network (10.0.0.0/16)                │  │
+│  │                                                              │  │
+│  │  ┌──────────────────────────────────────────────┐           │  │
+│  │  │         Internet Gateway                     │           │  │
+│  │  └─────────────────┬────────────────────────────┘           │  │
+│  │                    │                                         │  │
+│  │  ┌─────────────────┴──────────────────────────────────────┐ │  │
+│  │  │  Public Subnets (3 AZs)                                │ │  │
+│  │  │  10.0.1.0/24 | 10.0.2.0/24 | 10.0.3.0/24               │ │  │
+│  │  │  ┌────────────────┐                                    │ │  │
+│  │  │  │  NAT Gateway   │                                    │ │  │
+│  │  │  │  + Elastic IP  │                                    │ │  │
+│  │  │  └────────┬───────┘                                    │ │  │
+│  │  └───────────┼────────────────────────────────────────────┘ │  │
+│  │              │                                               │  │
+│  │  ┌───────────┴──────────────────────────────────────────┐   │  │
+│  │  │  Private Subnets (3 AZs)                             │   │  │
+│  │  │  10.0.4.0/24 | 10.0.5.0/24 | 10.0.6.0/24              │   │  │
+│  │  │  [ECS Tasks, RDS, ElastiCache, etc.]                 │   │  │
+│  │  └──────────────────────────────────────────────────────┘   │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │                 ECR - Container Registry                    │  │
+│  │  ┌────────────────────────────────────────────────────┐     │  │
+│  │  │  Repository: lesson-5-ecr                          │     │  │
+│  │  │  - Scan on push: ✓                                 │     │  │
+│  │  │  - Lifecycle: Keep 10 images                       │     │  │
+│  │  │  - Access policy: Current account + ECS + Lambda   │     │  │
+│  │  └────────────────────────────────────────────────────┘     │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+## Структура проекту
 
 ```
 .
-├── myproject/              # Django проєкт
-│   ├── __init__.py
-│   ├── settings.py        # Налаштування Django (з PostgreSQL)
-│   ├── urls.py            # URL маршрути
-│   ├── views.py           # Views (домашня сторінка)
-│   └── wsgi.py
-├── nginx/
-│   └── nginx.conf         # Конфігурація Nginx
-├── Dockerfile             # Docker образ для Django
-├── docker-compose.yml     # Оркестрація всіх сервісів
-├── requirements.txt       # Python залежності
-├── manage.py              # Django management скрипт
-└── README.md              # Цей файл
+├── main.tf              # Головний файл конфігурації
+├── backend.tf           # Налаштування backend для Terraform state
+├── outputs.tf           # Виведення значень
+├── modules/
+│   ├── s3-backend/      # Модуль для S3 та DynamoDB
+│   ├── vpc/             # Модуль для VPC
+│   └── ecr/             # Модуль для ECR
 ```
 
-## 🚀 Технології
+## Модуль S3 Backend
 
-- **Django 4.2** - Python веб-фреймворк
-- **PostgreSQL 15** - Реляційна база даних
-- **Nginx** - Веб-сервер і reverse proxy
-- **Gunicorn** - WSGI HTTP сервер для Python
-- **Docker & Docker Compose** - Контейнеризація
+### Що налаштовано:
 
-## 📦 Компоненти
+1. **S3 Бакет**:
+   - Версіювання увімкнено для збереження історії змін state файлів
+   - Server-side шифрування (AES256)
+   - Блокування публічного доступу
+   - Теги для організації ресурсів
 
-### 1. Django (web)
-- Python веб-застосунок
-- Порт: 8000 (внутрішній)
-- Використовує Gunicorn як WSGI сервер
+2. **DynamoDB Таблиця**:
+   - Налаштована для блокування state файлів
+   - Режим оплати: PAY_PER_REQUEST (платите за запити)
+   - Hash key: `LockID` (обов'язково для Terraform)
 
-### 2. PostgreSQL (db)
-- База даних для збереження інформації
-- Порт: 5432
-- Креденшали (змініть у продакшені!):
-  - Database: `djangodb`
-  - User: `djangouser`
-  - Password: `djangopass`
+### Змінні модуля:
 
-### 3. Nginx (nginx)
-- Reverse proxy сервер
-- Порт: 80 (зовнішній)
-- Проксирує запити до Django
+- `bucket_name` - назва S3 бакета (обов'язково)
+- `dynamodb_table_name` - назва DynamoDB таблиці (за замовчуванням: "terraform-state-lock")
+- `tags` - додаткові теги для ресурсів
 
-## 🛠️ Швидкий старт
+### Виведення (outputs):
 
-### Передумови
+- `s3_bucket_name` - назва створеного S3 бакета
+- `s3_bucket_arn` - ARN S3 бакета
+- `s3_bucket_region` - регіон S3 бакета
+- `dynamodb_table_name` - назва DynamoDB таблиці
+- `dynamodb_table_arn` - ARN DynamoDB таблиці
 
-Встановлені на вашому комп'ютері:
-- Docker
-- Docker Compose
+## Модуль VPC
 
-### Запуск проєкту
+### Що налаштовано:
 
-1. **Клонуйте репозиторій:**
+1. **VPC (Virtual Private Cloud)**:
+   - Кастомний CIDR блок (за замовчуванням 10.0.0.0/16)
+   - Увімкнений DNS hostname та DNS support
+   - Ізольована мережева інфраструктура
+
+2. **Публічні підмережі (3 шт)**:
+   - Розподілені по різним зонам доступності
+   - Автоматичне призначення публічних IP адрес
+   - Доступ до інтернету через Internet Gateway
+
+3. **Приватні підмережі (3 шт)**:
+   - Розподілені по різним зонам доступності
+   - Доступ до інтернету через NAT Gateway
+   - Ізольовані від прямого доступу з інтернету
+
+4. **Internet Gateway**:
+   - Забезпечує доступ до інтернету для публічних підмереж
+   - Двостороння комунікація з інтернетом
+
+5. **NAT Gateway**:
+   - Дозволяє приватним підмережам отримувати доступ до інтернету
+   - Одностороння комунікація (вихідний трафік)
+   - Розміщений в першій публічній підмережі
+   - Elastic IP для статичної адреси
+
+6. **Маршрутизація**:
+   - Публічна Route Table → Internet Gateway для публічних підмереж
+   - Приватна Route Table → NAT Gateway для приватних підмереж
+   - Автоматичні асоціації підмереж з відповідними таблицями
+
+### Змінні модуля:
+
+- `vpc_cidr_block` - CIDR блок для VPC (за замовчуванням: "10.0.0.0/16")
+- `vpc_name` - назва VPC (обов'язково)
+- `public_subnets` - список CIDR блоків для публічних підмереж (обов'язково)
+- `private_subnets` - список CIDR блоків для приватних підмереж (обов'язково)
+- `availability_zones` - список зон доступності (обов'язково)
+- `enable_nat_gateway` - створювати NAT Gateway (за замовчуванням: true)
+- `enable_dns_hostnames` - увімкнути DNS hostnames (за замовчуванням: true)
+- `enable_dns_support` - увімкнути DNS підтримку (за замовчуванням: true)
+- `tags` - додаткові теги для ресурсів
+
+### Виведення (outputs):
+
+- `vpc_id` - ID створеного VPC
+- `vpc_cidr_block` - CIDR блок VPC
+- `vpc_arn` - ARN VPC
+- `public_subnet_ids` - список ID публічних підмереж
+- `private_subnet_ids` - список ID приватних підмереж
+- `public_subnet_cidrs` - список CIDR блоків публічних підмереж
+- `private_subnet_cidrs` - список CIDR блоків приватних підмереж
+- `internet_gateway_id` - ID Internet Gateway
+- `nat_gateway_id` - ID NAT Gateway
+- `nat_gateway_public_ip` - публічний IP адрес NAT Gateway
+- `public_route_table_id` - ID публічної route table
+- `private_route_table_id` - ID приватної route table
+
+### Архітектура мережі:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                              VPC (10.0.0.0/16)                      │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    Internet Gateway                          │  │
+│  └─────────────────────────┬────────────────────────────────────┘  │
+│                            │                                        │
+│  ┌─────────────────────────┴────────────────────────────────────┐  │
+│  │              Public Route Table (0.0.0.0/0 → IGW)            │  │
+│  └──┬───────────────────┬───────────────────┬───────────────────┘  │
+│     │                   │                   │                       │
+│  ┌──▼────────────────┐ ┌▼──────────────────┐ ┌▼──────────────────┐│
+│  │Public Subnet      │ │Public Subnet      │ │Public Subnet      ││
+│  │10.0.1.0/24        │ │10.0.2.0/24        │ │10.0.3.0/24        ││
+│  │us-west-2a         │ │us-west-2b         │ │us-west-2c         ││
+│  │ ┌──────────────┐  │ │                   │ │                   ││
+│  │ │ NAT Gateway  │  │ │                   │ │                   ││
+│  │ │ + Elastic IP │  │ │                   │ │                   ││
+│  │ └──────┬───────┘  │ │                   │ │                   ││
+│  └────────┼──────────┘ └───────────────────┘ └───────────────────┘│
+│           │                                                         │
+│  ┌────────┴──────────────────────────────────────────────────────┐ │
+│  │         Private Route Table (0.0.0.0/0 → NAT Gateway)         │ │
+│  └──┬───────────────────┬───────────────────┬───────────────────┘ │
+│     │                   │                   │                      │
+│  ┌──▼────────────────┐ ┌▼──────────────────┐ ┌▼──────────────────┐│
+│  │Private Subnet     │ │Private Subnet     │ │Private Subnet     ││
+│  │10.0.4.0/24        │ │10.0.5.0/24        │ │10.0.6.0/24        ││
+│  │us-west-2a         │ │us-west-2b         │ │us-west-2c         ││
+│  │                   │ │                   │ │                   ││
+│  └───────────────────┘ └───────────────────┘ └───────────────────┘│
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Приклад використання:
+
+```hcl
+module "vpc" {
+  source             = "./modules/vpc"
+  vpc_cidr_block     = "10.0.0.0/16"
+  vpc_name           = "my-vpc"
+  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnets    = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  
+  tags = {
+    Environment = "production"
+    Project     = "my-project"
+  }
+}
+```
+
+```
+
+## Модуль ECR
+
+### Що налаштовано:
+
+1. **ECR Repository**:
+   - Приватний Docker registry для зберігання контейнерних образів
+   - **Автоматичне сканування на вразливості** при push образів (scan on push)
+   - Налаштована мутабельність тегів (MUTABLE/IMMUTABLE)
+
+2. **Lifecycle Policy**:
+   - Автоматичне видалення старих образів
+   - Збереження останніх 10 образів
+   - Економія місця та витрат
+
+3. **Repository Policy (Політика доступу)**:
+   - Дозволяє поточному AWS account push та pull образи
+   - Автоматичний доступ для ECS tasks (pull only)
+   - Автоматичний доступ для Lambda функцій (pull only)
+   - Можливість додати інші AWS accounts через змінну `allowed_account_ids`
+   - Детальний контроль доступу через IAM permissions
+
+### Змінні модуля:
+
+- `ecr_name` - назва ECR репозиторію (обов'язково)
+- `scan_on_push` - сканувати образи на вразливості при push (за замовчуванням: true)
+- `image_tag_mutability` - чи можна перезаписувати теги (за замовчуванням: "MUTABLE")
+- `enable_repository_policy` - створювати політику доступу (за замовчуванням: true)
+- `allowed_account_ids` - список додаткових AWS Account ID з доступом (за замовчуванням: [])
+- `tags` - додаткові теги для ресурсів
+
+### Виведення (outputs):
+
+- `repository_url` - URL репозиторію для push/pull образів
+- `repository_arn` - ARN репозиторію
+- `repository_name` - назва репозиторію
+- `registry_id` - ID реєстру
+- `repository_policy` - JSON політики доступу
+- `scan_on_push_enabled` - статус сканування при push
+
+### Приклад використання:
+
+```hcl
+module "ecr" {
+  source      = "./modules/ecr"
+  ecr_name    = "my-app-repo"
+  scan_on_push = true
+  
+  # Додати доступ для інших AWS accounts
+  allowed_account_ids = [
+    "123456789012",  # Dev account
+    "987654321098"   # Prod account
+  ]
+  
+  # Незмінні теги (рекомендовано для production)
+  image_tag_mutability = "IMMUTABLE"
+  
+  tags = {
+    Environment = "production"
+    Project     = "my-app"
+  }
+}
+```
+
+### Політика доступу
+
+Модуль автоматично створює політику доступу, яка дозволяє:
+
+1. **Поточний AWS Account** - повний доступ (push/pull)
+2. **ECS Tasks** - тільки pull образів для запуску контейнерів
+3. **Lambda Functions** - тільки pull образів для контейнерних Lambda
+4. **Додаткові Accounts** - повний доступ через `allowed_account_ids`
+
+Приклад згенерованої політики:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPushPull",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::123456789012:root"
+      },
+      "Action": [
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload"
+      ]
+    }
+  ]
+}
+```
+
+### Робота з ECR:
+
 ```bash
-git clone <your-repo-url>
-cd devops-ci-cd
+# Аутентифікація в ECR
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $(terraform output -raw ecr_repository_url | cut -d/ -f1)
+
+# Build Docker образу
+docker build -t my-app:latest .
+
+# Тегування для ECR
+docker tag my-app:latest $(terraform output -raw ecr_repository_url):latest
+
+# Push до ECR
+docker push $(terraform output -raw ecr_repository_url):latest
+
+# Pull з ECR
+docker pull $(terraform output -raw ecr_repository_url):latest
+
+# Перегляд результатів сканування
+aws ecr describe-image-scan-findings \
+  --repository-name $(terraform output -raw ecr_repository_name) \
+  --image-id imageTag=latest
+
+# Список образів в репозиторії
+aws ecr describe-images \
+  --repository-name $(terraform output -raw ecr_repository_name)
+
+# Видалення образу
+aws ecr batch-delete-image \
+  --repository-name $(terraform output -raw ecr_repository_name) \
+  --image-ids imageTag=old-tag
 ```
 
-2. **Створіть файл .env (опціонально):**
+### Сканування на вразливості
+
+При увімкненому `scan_on_push = true`:
+- Кожен новий образ автоматично сканується після push
+- Виявляються вразливості CVE (Common Vulnerabilities and Exposures)
+- Результати доступні через AWS консоль або CLI
+- Можна налаштувати алерти через EventBridge для critical вразливостей
+
+Приклад перегляду результатів:
 ```bash
-cp .env.example .env
+aws ecr describe-image-scan-findings \
+  --repository-name my-app-repo \
+  --image-id imageTag=v1.0.0 \
+  --query 'imageScanFindings.findings[?severity==`CRITICAL`]'
 ```
 
-3. **Запустіть всі сервіси:**
+## Початкове налаштування
+
+### Крок 1: Замініть placeholder значення
+
+У файлі `main.tf` та `backend.tf` замініть `"ваше ім'я"` на унікальну назву для вашого S3 бакета:
+
+```hcl
+# main.tf
+module "s3_backend" {
+  source              = "./modules/s3-backend"
+  bucket_name         = "your-unique-bucket-name-terraform-state"  # Замініть це
+  dynamodb_table_name = "terraform-locks"
+  ...
+}
+
+# backend.tf
+terraform {
+  backend "s3" {
+    bucket         = "your-unique-bucket-name-terraform-state"  # Замініть це
+    key            = "lesson-5/terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}
+```
+
+### Крок 2: Перше розгортання (без backend)
+
+Спочатку потрібно створити S3 бакет та DynamoDB таблицю. Тимчасово закоментуйте блок `backend` у файлі `backend.tf`:
+
+```hcl
+# terraform {
+#   backend "s3" {
+#     ...
+#   }
+# }
+```
+
+Потім виконайте:
+
 ```bash
-docker-compose up -d
+terraform init
+terraform plan
+terraform apply
 ```
 
-4. **Перевірте статус контейнерів:**
+### Крок 3: Міграція state до S3
+
+Після створення ресурсів, розкоментуйте блок `backend` у `backend.tf` та виконайте:
+
 ```bash
-docker-compose ps
+terraform init -migrate-state
 ```
 
-5. **Відкрийте браузер:**
-   - Домашня сторінка: http://localhost
-   - Адмін панель: http://localhost/admin/
+Terraform запитає підтвердження для переміщення state файлу до S3.
 
-### Корисні команди
+## Використання
 
-**Переглянути логи:**
+### Перевірка конфігурації
+
 ```bash
-docker-compose logs -f          # Всі сервіси
-docker-compose logs -f web      # Тільки Django
-docker-compose logs -f db       # Тільки PostgreSQL
-docker-compose logs -f nginx    # Тільки Nginx
+terraform validate
 ```
 
-**Зупинити проєкт:**
+### Планування змін
+
 ```bash
-docker-compose down
+terraform plan
 ```
 
-**Зупинити і видалити volumes:**
+### Застосування змін
+
 ```bash
-docker-compose down -v
+terraform apply
 ```
 
-**Створити суперкористувача Django:**
+### Виведення значень
+
 ```bash
-docker-compose exec web python manage.py createsuperuser
+terraform output
 ```
 
-**Виконати міграції:**
+### Видалення інфраструктури
+
 ```bash
-docker-compose exec web python manage.py migrate
+terraform destroy
 ```
 
-**Зайти в контейнер:**
+**⚠️ Увага**: Перед видаленням переконайтеся, що S3 бакет порожній, або використовуйте force delete.
+
+## Безпека
+
+Модуль автоматично налаштовує:
+- ✅ Шифрування S3 бакета
+- ✅ Блокування публічного доступу до S3
+- ✅ Версіювання для відновлення попередніх станів
+- ✅ DynamoDB блокування для запобігання одночасних змін
+
+## Рекомендації
+
+1. **Унікальна назва бакета**: S3 бакети мають глобально унікальні імена
+2. **Регіон**: Використовуйте регіон, близький до вашої інфраструктури
+3. **Теги**: Додавайте теги для організації та відстеження витрат
+4. **Backup**: State файли автоматично версіюються, але рекомендується додаткове резервне копіювання
+
+## Корисні команди
+
 ```bash
-docker-compose exec web bash       # Django
-docker-compose exec db psql -U djangouser -d djangodb  # PostgreSQL
+# Форматування коду
+terraform fmt -recursive
+
+# Перевірка конфігурації
+terraform validate
+
+# Оновлення модулів
+terraform get -update
+
+# Перегляд поточного state
+terraform show
+
+# Список ресурсів у state
+terraform state list
+
+# Детальний output конкретного ресурсу
+terraform state show module.vpc.aws_vpc.main
+
+# Графічне відображення інфраструктури
+terraform graph | dot -Tsvg > graph.svg
+
+# Перевірка окремого модуля VPC
+terraform plan -target=module.vpc
+
+# Виведення специфічного output
+terraform output vpc_id
+terraform output public_subnet_ids
 ```
 
-**Перезапустити сервіси:**
+## Тестування мережевої конфігурації
+
+Після розгортання VPC, ви можете перевірити конфігурацію через AWS CLI:
+
 ```bash
-docker-compose restart
+# Перевірка VPC
+aws ec2 describe-vpcs --vpc-ids $(terraform output -raw vpc_id)
+
+# Перевірка підмереж
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(terraform output -raw vpc_id)"
+
+# Перевірка route tables
+aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$(terraform output -raw vpc_id)"
+
+# Перевірка Internet Gateway
+aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$(terraform output -raw vpc_id)"
+
+# Перевірка NAT Gateway
+aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$(terraform output -raw vpc_id)"
 ```
 
-**Перебудувати образи:**
+## Troubleshooting
+
+### S3 Backend
+
+**Помилка: "bucket already exists"**
+S3 бакет має глобально унікальну назву. Виберіть іншу назву.
+
+**Помилка: "Error acquiring state lock"**
+Інший процес Terraform використовує state. Дочекайтеся завершення або видаліть блокування вручну через DynamoDB консоль (обережно!).
+
+### AWS Credentials
+
+**Помилка: "No valid credential sources found"**
+Налаштуйте AWS credentials:
 ```bash
-docker-compose up -d --build
+aws configure
 ```
 
-## 🔧 Налаштування
+### VPC
 
-### Django settings.py
-
-Основні налаштування в `myproject/settings.py`:
-
-- **База даних**: PostgreSQL з креденшалами з environment variables
-- **Static files**: Збираються в `/app/staticfiles/`
-- **Allowed hosts**: `['*']` (змініть у продакшені!)
-- **Debug**: Керується через `DEBUG` env var
-
-### Nginx конфігурація
-
-В `nginx/nginx.conf`:
-- Слухає на порті 80
-- Проксирує всі запити до Django (web:8000)
-- Віддає статичні файли з `/app/staticfiles/`
-
-### Docker Compose
-
-Три сервіси в `docker-compose.yml`:
-1. **db**: PostgreSQL з persistent volume
-2. **web**: Django з залежністю від db
-3. **nginx**: Reverse proxy з залежністю від web
-
-## 📊 Перевірка роботи
-
-1. **Перевірте доступність:**
+**Помилка: "availability zones not available"**
+Переконайтеся, що вказані зони доступності існують у вашому регіоні:
 ```bash
-curl http://localhost
+aws ec2 describe-availability-zones --region us-west-2
 ```
 
-2. **Перевірте підключення до бази даних:**
-   - Відкрийте http://localhost - статус PostgreSQL має бути "Підключено"
+**Помилка: "insufficient subnet IPs"**
+Збільште CIDR блок або зменшіть кількість підмереж.
 
-3. **Перевірте логи:**
+### ECR
+
+**Помилка: "denied: Your authorization token has expired"**
+Оновіть токен автентифікації:
 ```bash
-docker-compose logs
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-west-2.amazonaws.com
 ```
 
-## 🐛 Troubleshooting
+**Помилка: "AccessDeniedException when scanning image"**
+Переконайтеся, що IAM роль має дозвіл `ecr:StartImageScan`.
 
-**Проблема: "Port is already allocated"**
-```bash
-# Перевірте, що порти 80, 8000, 5432 вільні
-sudo lsof -i :80
-sudo lsof -i :8000
-sudo lsof -i :5432
+**Помилка: "Image with tag already exists" (для IMMUTABLE)**
+При `image_tag_mutability = "IMMUTABLE"` не можна перезаписувати існуючі теги. Використовуйте унікальні теги (наприклад, git commit hash).
+
+## Безпека та Best Practices
+
+### S3 Backend
+- ✅ Версіювання увімкнено для відновлення
+- ✅ Шифрування увімкнено
+- ✅ Публічний доступ заблоковано
+- ⚠️ Рекомендація: увімкніть MFA Delete для production
+
+### VPC
+- ✅ 3-зональна архітектура для high availability
+- ✅ Приватні підмережі ізольовані від інтернету
+- ✅ NAT Gateway для безпечного вихідного трафіку
+- ⚠️ Рекомендація: розгляньте VPC Flow Logs для моніторингу
+
+### ECR
+- ✅ Автоматичне сканування на вразливості
+- ✅ Lifecycle policy для економії витрат
+- ✅ Детальна політика доступу
+- ⚠️ Рекомендація: використовуйте IMMUTABLE теги для production
+- ⚠️ Рекомендація: налаштуйте EventBridge для алертів про критичні вразливості
+
+## Розрахунок витрат
+
+Приблизні щомісячні витрати (us-west-2):
+
+| Сервіс | Опис | Вартість |
+|--------|------|----------|
+| S3 | State файли (~1 MB) | ~$0.02 |
+| DynamoDB | On-demand, блокування | ~$0.00 (мінімальне використання) |
+| VPC | Базова інфраструктура | $0.00 |
+| NAT Gateway | 24/7 + data transfer | ~$32-45/міс |
+| ECR | 10 GB зберігання | ~$1.00 |
+| **Разом** | | **~$33-46/міс** |
+
+⚠️ **Найбільша вартість**: NAT Gateway ($0.045/год + $0.045/GB transfer)
+
+**Порада для зменшення витрат**:
+- Використовуйте VPC Endpoints для AWS сервісів замість NAT
+- Видаляйте старі ECR образи через lifecycle policy
+- Вимикайте NAT Gateway для dev оточення коли не використовується
+
+## Додаткова документація
+
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - Швидкий старт з покроковими інструкціями
+- **[ENVIRONMENTS.md](docs/ENVIRONMENTS.md)** - Приклади конфігурацій для dev/staging/prod оточень
+
+## Структура проекту
+
+```
+devops-ci-cd/
+├── README.md              # Головна документація
+├── QUICKSTART.md          # Швидкий старт
+├── ENVIRONMENTS.md        # Приклади різних оточень
+├── main.tf                # Головний файл конфігурації з модулями
+├── backend.tf             # Налаштування S3 backend
+├── outputs.tf             # Виведення значень з модулів
+│
+└── modules/               # Terraform модулі
+    ├── s3-backend/        # Модуль для S3 та DynamoDB
+    │   ├── s3.tf          # S3 бакет з версіюванням
+    │   ├── dynamodb.tf    # DynamoDB таблиця для блокування
+    │   ├── variables.tf   # Змінні модуля
+    │   └── outputs.tf     # Виведення: bucket URL, DynamoDB table name
+    │
+    ├── vpc/               # Модуль VPC
+    │   ├── vpc.tf         # VPC, підмережі, IGW, NAT Gateway
+    │   ├── routes.tf      # Route tables та асоціації
+    │   ├── variables.tf   # Змінні модуля
+    │   └── outputs.tf     # Виведення: VPC ID, subnet IDs, NAT IP
+    │
+    └── ecr/               # Модуль ECR
+        ├── ecr.tf         # ECR репозиторій, lifecycle, політика доступу
+        ├── variables.tf   # Змінні модуля
+        └── outputs.tf     # Виведення: repository URL, scan status
 ```
 
-**Проблема: "Database connection failed"**
-```bash
-# Перевірте, що PostgreSQL запущений
-docker-compose ps
-# Подивіться логи
-docker-compose logs db
-```
+## Ключові особливості реалізації
 
-**Проблема: "Static files not found"**
-```bash
-# Зберіть static files
-docker-compose exec web python manage.py collectstatic --noinput
-```
+### ✅ Виконано всі вимоги:
 
-## 📝 Завдання виконано
+1. **S3 Backend**
+   - ✅ S3 бакет для стейт-файлів
+   - ✅ Версіювання увімкнено
+   - ✅ DynamoDB для блокування
+   - ✅ Outputs: URL S3 та ім'я DynamoDB
 
-✅ Створено Django проєкт  
-✅ Налаштовано PostgreSQL як базу даних  
-✅ Додано Nginx для проксирування трафіку  
-✅ Створено Dockerfile для Django  
-✅ Створено docker-compose.yml з трьома сервісами  
-✅ Налаштовано nginx.conf  
-✅ Протестовано локально  
+2. **VPC Infrastructure**
+   - ✅ VPC з CIDR блоком
+   - ✅ 3 публічні підмережі
+   - ✅ 3 приватні підмережі
+   - ✅ Internet Gateway
+   - ✅ NAT Gateway
+   - ✅ Повна маршрутизація через Route Tables
 
-## 🤝 Автор
+3. **ECR Repository**
+   - ✅ Автоматичне сканування образів (scan_on_push)
+   - ✅ Політика доступу для репозиторію
+   - ✅ URL репозиторію через outputs
 
-Проєкт створено для курсу DevOps CI/CD
+### 🎯 Бонусні features:
 
-## 📄 Ліцензія
-
-MIT
+- 📦 Lifecycle policy для ECR (автоматичне видалення старих образів)
+- 🔒 Політика доступу з підтримкою ECS та Lambda
+- 🏷️ Система тегів для всіх ресурсів
+- 📊 Детальна документація з прикладами
+- 🚀 Швидкий старт з готовими командами
+- 🌍 Приклади для різних оточень (dev/staging/prod)
+- 💰 Розрахунок витрат та рекомендації
+- 🔍 Troubleshooting guide
+- 📐 Діаграми архітектури

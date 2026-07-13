@@ -1,48 +1,71 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Terraform files
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
 
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-/media
-/staticfiles
-/static
+# Terraform plan files
+*.tfplan
+tfplan
+plan.out
 
-# Environment
+# Terraform variable files with sensitive data
+*.tfvars
+!example.tfvars
+*.auto.tfvars
+.terraform.tfvars
+
+# AWS credentials and config
+aws
+.aws/
+*.pem
+*.key
+
+# Environment variables
 .env
-.venv
+.env.local
+.envrc
 
-# IDEs
+# IDE and Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
+
+# Python (if using scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Backup files
+*.bak
+*.backup
+
+# OS files
 Thumbs.db
+.DS_Store
+.directory
