@@ -60,3 +60,19 @@ output "ecr_repository_name" {
   description = "Назва ECR репозиторію"
   value       = module.ecr.repository_name
 }
+
+# Outputs для EKS
+output "eks_cluster_endpoint" {
+  description = "Endpoint EKS кластера для підключення"
+  value       = module.eks.eks_cluster_endpoint
+}
+
+output "eks_cluster_name" {
+  description = "Назва EKS кластера"
+  value       = module.eks.eks_cluster_name
+}
+
+output "eks_node_role_arn" {
+  description = "ARN IAM ролі для EKS Worker Nodes"
+  value       = module.eks.eks_node_role_arn
+}

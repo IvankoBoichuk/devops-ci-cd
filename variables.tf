@@ -1,0 +1,48 @@
+# Загальні змінні проекту
+
+variable "project_name" {
+  description = "Назва проекту"
+  type        = string
+  default     = "lesson-5"
+}
+
+variable "environment" {
+  description = "Оточення (dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}
+
+variable "aws_region" {
+  description = "AWS регіон"
+  type        = string
+  default     = "us-east-1"
+}
+
+# Змінні для VPC
+variable "vpc_cidr_block" {
+  description = "CIDR блок для VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "availability_zones" {
+  description = "Список зон доступності"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
+}
+
+# Змінні для EKS (якщо буде використовуватись)
+variable "eks_cluster_name" {
+  description = "Назва EKS кластера"
+  type        = string
+  default     = ""
+}
+
+# Загальні теги
+variable "common_tags" {
+  description = "Загальні теги для всіх ресурсів"
+  type        = map(string)
+  default = {
+    ManagedBy = "Terraform"
+  }
+}

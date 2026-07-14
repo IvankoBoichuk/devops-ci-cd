@@ -69,3 +69,6 @@ temp/
 Thumbs.db
 .DS_Store
 .directory
+
+# Local Helm values containing credentials
+charts/django-app/secret-values.yaml
