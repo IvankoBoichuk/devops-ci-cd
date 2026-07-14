@@ -97,4 +97,3 @@ resource "aws_eks_node_group" "general" {
     ignore_changes = [scaling_config[0].desired_size]
   }
 }
-

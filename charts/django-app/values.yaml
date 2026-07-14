@@ -6,7 +6,7 @@ image:
 replicaCount: 2
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
   targetPort: 8000
 
@@ -52,3 +52,4 @@ postgresql:
   enabled: true
   image: postgres:15-alpine
   storage: 1Gi
+  storageClass: ""
