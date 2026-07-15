@@ -83,6 +83,7 @@ resource "helm_release" "jenkins" {
       pipeline_ecr_repository    = var.pipeline_ecr_repository
       pipeline_deploy_repo_url   = var.pipeline_deploy_repo_url
       pipeline_deploy_values_file = var.pipeline_deploy_values_file
+      pipeline_deploy_branch     = var.pipeline_deploy_branch
       pipeline_repo_credentials_id = var.pipeline_repo_credentials_id
       gitops_credentials_id      = var.gitops_credentials_id
       git_username               = var.git_username

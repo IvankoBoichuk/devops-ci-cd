@@ -42,6 +42,7 @@ controller:
                   stringParam('ECR_REPOSITORY', '${pipeline_ecr_repository}', 'Full ECR repository URL')
                   stringParam('DEPLOY_REPO_URL', '${pipeline_deploy_repo_url}', 'HTTPS URL of the deployment repository')
                   stringParam('DEPLOY_VALUES_FILE', '${pipeline_deploy_values_file}', 'Path to values.yaml inside deployment repository')
+                  stringParam('DEPLOY_BRANCH', '${pipeline_deploy_branch}', 'Branch in the deployment repository to update')
                 }
                 definition {
                   cpsScm {

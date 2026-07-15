@@ -32,13 +32,13 @@ spec:
     AWS_DEFAULT_REGION = 'us-east-1'
     APP_SOURCE_DIR  = 'devops-ci-cd-lesson-4'
     DOCKERFILE_PATH = 'devops-ci-cd-lesson-4/Dockerfile'
-    DEPLOY_BRANCH   = 'main'
   }
 
   parameters {
     string(name: 'ECR_REPOSITORY', defaultValue: '', description: 'Full ECR repository URL, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/app')
     string(name: 'DEPLOY_REPO_URL', defaultValue: '', description: 'HTTPS URL of the GitOps/deployment repository to update')
     string(name: 'DEPLOY_VALUES_FILE', defaultValue: 'charts/django-app/values.yaml', description: 'Path to values.yaml inside deployment repository')
+    string(name: 'DEPLOY_BRANCH', defaultValue: 'main', description: 'Branch in the deployment repository to update')
   }
 
   stages {

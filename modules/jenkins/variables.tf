@@ -152,6 +152,12 @@ variable "pipeline_deploy_values_file" {
   default     = "charts/django-app/values.yaml"
 }
 
+variable "pipeline_deploy_branch" {
+  description = "Default branch in the deployment repository to update"
+  type        = string
+  default     = "main"
+}
+
 variable "pipeline_repo_credentials_id" {
   description = "Credentials ID used by Jenkins to clone the pipeline repository"
   type        = string

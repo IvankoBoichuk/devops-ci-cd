@@ -108,6 +108,7 @@ module "jenkins" {
   pipeline_ecr_repository  = module.ecr.repository_url
   pipeline_deploy_repo_url = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
   pipeline_deploy_values_file = "charts/django-app/values.yaml"
+  pipeline_deploy_branch = "lesson-8-9"
 
   admin_password = var.jenkins_admin_password
   git_username = "IvankoBoichuk"
