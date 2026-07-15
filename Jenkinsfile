@@ -11,14 +11,25 @@ spec:
   containers:
     - name: git
       image: alpine/git:2.45.2
-      command:
-        - cat
+      command: ['cat']
       tty: true
+    - name: aws
+      image: amazon/aws-cli:latest
+      command: ['cat']
+      tty: true
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
     - name: kaniko
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
-      command:
-        - /busybox/cat
+      command: ['/busybox/cat']
       tty: true
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+  volumes:
+    - name: docker-config
+      emptyDir: {}
 '''
     }
   }
@@ -38,7 +49,7 @@ spec:
     string(name: 'ECR_REPOSITORY', defaultValue: '', description: 'Full ECR repository URL, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/app')
     string(name: 'DEPLOY_REPO_URL', defaultValue: '', description: 'HTTPS URL of the GitOps/deployment repository to update')
     string(name: 'DEPLOY_VALUES_FILE', defaultValue: 'charts/django-app/values.yaml', description: 'Path to values.yaml inside deployment repository')
-    string(name: 'DEPLOY_BRANCH', defaultValue: 'main', description: 'Branch in the deployment repository to update')
+    string(name: 'DEPLOY_BRANCH', defaultValue: 'lesson-8-9', description: 'Branch in the deployment repository to update')
   }
 
   stages {
@@ -120,6 +131,12 @@ spec:
   post {
     success {
       echo "Pushed image: ${params.ECR_REPOSITORY}:${env.IMAGE_TAG}"
+    }
+    failure {
+      echo "Pipeline failed. Check Jenkins logs and Kubernetes agent pods."
+    }
+    always {
+      cleanWs()
     }
   }
 }

@@ -24,6 +24,7 @@ data "aws_caller_identity" "current" {}
 
 data "aws_eks_cluster" "eks" {
   name = local.eks_cluster_name
+  depends_on = [module.eks]
 }
 
 provider "helm" {
@@ -115,9 +116,12 @@ module "jenkins" {
   git_token    = var.git_token
 
   providers = {
+    aws        = aws
     helm       = helm
     kubernetes = kubernetes
   }
+
+  depends_on = [module.eks]
 }
 
 module "argo_cd" {
@@ -165,4 +169,6 @@ module "argo_cd" {
     helm       = helm
     kubernetes = kubernetes
   }
+
+  depends_on = [module.eks]
 }

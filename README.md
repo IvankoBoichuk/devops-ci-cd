@@ -71,6 +71,127 @@
 │   └── ecr/             # Модуль для ECR
 ```
 
+## Jenkins + Argo CD Workflow
+
+### Як застосувати Terraform
+
+1. Створіть локальний файл змінних:
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+2. Заповніть у `terraform.tfvars` секретні значення:
+- `jenkins_admin_password`
+- `git_token`
+- `django_db_password`
+- `django_secret_key`
+
+3. Ініціалізуйте Terraform:
+
+```bash
+terraform init -upgrade
+```
+
+4. Застосуйте інфраструктуру:
+
+```bash
+terraform apply
+```
+
+5. Корисні outputs після успішного `apply`:
+
+```bash
+terraform output jenkins_url
+terraform output jenkins_admin_password
+terraform output argo_cd_url
+terraform output argo_cd_admin_password
+terraform output ecr_repository_url
+```
+
+### Як перевірити Jenkins job
+
+1. Відкрийте Jenkins за адресою з:
+
+```bash
+terraform output jenkins_url
+```
+
+2. Зайдіть під:
+- `admin`
+- пароль з `terraform output jenkins_admin_password`
+
+3. Знайдіть job:
+- `django-kaniko-pipeline`
+
+4. Запустіть `Build with Parameters` і перевірте, що параметри заповнені:
+- `ECR_REPOSITORY`
+- `DEPLOY_REPO_URL`
+- `DEPLOY_VALUES_FILE`
+- `DEPLOY_BRANCH`
+
+5. Після успішного запуску перевірте:
+- у log є push image в ECR
+- у Git оновився `charts/django-app/values.yaml`
+
+Швидка перевірка з терміналу:
+
+```bash
+git show lesson-8-9:charts/django-app/values.yaml | rg "tag:"
+```
+
+### Як побачити результат в Argo CD
+
+1. Відкрийте Argo CD за адресою з:
+
+```bash
+terraform output argo_cd_url
+```
+
+2. Логін:
+- username: `admin`
+- пароль з:
+
+```bash
+terraform output argo_cd_admin_password
+```
+
+3. Перевірте, що застосунок `django-app` існує:
+
+```bash
+kubectl get applications -n argocd
+```
+
+4. Перевірте, що після push у Git Argo CD переходить:
+- `OutOfSync`
+- потім `Synced`
+
+```bash
+kubectl get applications -n argocd -w
+```
+
+5. Перевірте, який image реально задеплоєний у кластер:
+
+```bash
+kubectl get deployment django-app-django -o jsonpath='{.spec.template.spec.containers[0].image}'
+echo
+```
+
+6. Перевірте результат на сервісі:
+
+```bash
+kubectl get svc django-app-django
+curl http://<LOADBALANCER-HOSTNAME>/
+```
+
+### Загальна схема
+
+1. Jenkins збирає Docker image.
+2. Jenkins пушить image в ECR.
+3. Jenkins оновлює `charts/django-app/values.yaml` у Git.
+4. Argo CD бачить зміну в Git.
+5. Argo CD автоматично синхронізує зміни в Kubernetes.
+
 ## Модуль S3 Backend
 
 ### Що налаштовано:

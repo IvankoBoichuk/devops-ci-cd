@@ -83,6 +83,16 @@ controller:
       []
 %{ endif ~}
 
+agent:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "512Mi"
+
 persistence:
   enabled: true
   storageClass: "${storage_class}"
