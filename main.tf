@@ -119,3 +119,50 @@ module "jenkins" {
     kubernetes = kubernetes
   }
 }
+
+module "argo_cd" {
+  source   = "./modules/argo_cd"
+  repo_url = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
+  django_db_password = var.django_db_password
+  django_secret_key  = var.django_secret_key
+  applications = [
+    {
+      name            = "django-app"
+      namespace       = "argocd"
+      target_revision = "lesson-8-9"
+      path            = "charts/django-app"
+      destination_ns  = "default"
+      helm_parameters = [
+        {
+          name  = "service.type"
+          value = "LoadBalancer"
+        },
+        {
+          name  = "postgresql.storageClass"
+          value = "gp2"
+        },
+        {
+          name  = "replicaCount"
+          value = "1"
+        },
+        {
+          name  = "autoscaling.minReplicas"
+          value = "1"
+        },
+        {
+          name  = "secret.create"
+          value = "false"
+        },
+        {
+          name  = "secret.existingSecret"
+          value = "django-app-app"
+        }
+      ]
+    }
+  ]
+
+  providers = {
+    helm       = helm
+    kubernetes = kubernetes
+  }
+}

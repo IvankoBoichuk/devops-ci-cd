@@ -7,3 +7,5 @@ availability_zones      = ["us-east-1a", "us-east-1b", "us-east-1c"]
 
 jenkins_admin_password  = "change-me"
 git_token               = "change-me"
+django_db_password      = "change-me"
+django_secret_key       = "change-me"

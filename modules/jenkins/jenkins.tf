@@ -96,7 +96,7 @@ resource "helm_release" "jenkins" {
   ]
 }
 
-resource "kubernetes_service_account" "jenkins_sa" {
+resource "kubernetes_service_account_v1" "jenkins_sa" {
   metadata {
     name      = "jenkins-sa"
     namespace = var.namespace
@@ -108,7 +108,7 @@ resource "kubernetes_service_account" "jenkins_sa" {
   depends_on = [helm_release.jenkins]
 }
 
-resource "kubernetes_role" "deploy_manager" {
+resource "kubernetes_role_v1" "deploy_manager" {
   metadata {
     name      = "jenkins-deploy-manager"
     namespace = var.deploy_namespace
@@ -151,7 +151,7 @@ resource "kubernetes_role" "deploy_manager" {
   }
 }
 
-resource "kubernetes_role_binding" "deploy_manager" {
+resource "kubernetes_role_binding_v1" "deploy_manager" {
   metadata {
     name      = "jenkins-deploy-manager"
     namespace = var.deploy_namespace
@@ -160,12 +160,12 @@ resource "kubernetes_role_binding" "deploy_manager" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "Role"
-    name      = kubernetes_role.deploy_manager.metadata[0].name
+    name      = kubernetes_role_v1.deploy_manager.metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.jenkins_sa.metadata[0].name
+    name      = kubernetes_service_account_v1.jenkins_sa.metadata[0].name
     namespace = var.namespace
   }
 }

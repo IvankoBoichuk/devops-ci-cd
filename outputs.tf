@@ -97,3 +97,19 @@ output "jenkins_admin_password" {
   value       = module.jenkins.jenkins_admin_password
   sensitive   = true
 }
+
+output "argo_cd_namespace" {
+  description = "Namespace where Argo CD is installed"
+  value       = module.argo_cd.argo_cd_namespace
+}
+
+output "argo_cd_url" {
+  description = "URL for accessing Argo CD"
+  value       = module.argo_cd.argo_cd_url
+}
+
+output "argo_cd_admin_password" {
+  description = "Initial Argo CD admin password"
+  value       = module.argo_cd.argo_cd_admin_password
+  sensitive   = true
+}

@@ -59,3 +59,15 @@ variable "jenkins_admin_password" {
   type        = string
   sensitive   = true
 }
+
+variable "django_db_password" {
+  description = "Database password for django-app"
+  type        = string
+  sensitive   = true
+}
+
+variable "django_secret_key" {
+  description = "Django SECRET_KEY for django-app"
+  type        = string
+  sensitive   = true
+}
