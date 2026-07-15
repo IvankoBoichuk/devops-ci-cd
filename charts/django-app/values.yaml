@@ -1,6 +1,6 @@
 image:
   repository: 444152780810.dkr.ecr.us-east-1.amazonaws.com/lesson-5-dev-ecr
-  tag: "8-b5dc3cb"
+  tag: "9-2078da7"
   pullPolicy: IfNotPresent
 
 replicaCount: 2
