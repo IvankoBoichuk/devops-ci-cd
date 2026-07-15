@@ -101,6 +101,7 @@ variable "install_plugins" {
     "configuration-as-code",
     "credentials-binding",
     "job-dsl",
+    "ws-cleanup",
   ]
 }
 
