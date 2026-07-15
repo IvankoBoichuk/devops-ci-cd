@@ -134,6 +134,24 @@ variable "pipeline_script_path" {
   default     = "Jenkinsfile"
 }
 
+variable "pipeline_ecr_repository" {
+  description = "Default ECR repository URL for the Jenkins pipeline"
+  type        = string
+  default     = ""
+}
+
+variable "pipeline_deploy_repo_url" {
+  description = "Default deployment repository URL for the Jenkins pipeline"
+  type        = string
+  default     = ""
+}
+
+variable "pipeline_deploy_values_file" {
+  description = "Default path to values.yaml in the deployment repository"
+  type        = string
+  default     = "charts/django-app/values.yaml"
+}
+
 variable "pipeline_repo_credentials_id" {
   description = "Credentials ID used by Jenkins to clone the pipeline repository"
   type        = string

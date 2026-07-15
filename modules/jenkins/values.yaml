@@ -38,6 +38,11 @@ controller:
         jobs:
           - script: >
               pipelineJob('${pipeline_job_name}') {
+                parameters {
+                  stringParam('ECR_REPOSITORY', '${pipeline_ecr_repository}', 'Full ECR repository URL')
+                  stringParam('DEPLOY_REPO_URL', '${pipeline_deploy_repo_url}', 'HTTPS URL of the deployment repository')
+                  stringParam('DEPLOY_VALUES_FILE', '${pipeline_deploy_values_file}', 'Path to values.yaml inside deployment repository')
+                }
                 definition {
                   cpsScm {
                     scm {
