@@ -19,6 +19,11 @@ spec:
       command:
         - /busybox/cat
       tty: true
+    - name: helm
+      image: alpine/helm:3.14.4
+      command:
+        - cat
+      tty: true
 '''
     }
   }
@@ -111,6 +116,33 @@ spec:
               git push origin "${DEPLOY_BRANCH}"
             '''
           }
+        }
+      }
+    }
+
+    stage('Deploy To Kubernetes') {
+      steps {
+        container('helm') {
+          sh '''
+            set -eu
+
+            TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+            CA_CERT="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+            API_SERVER="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT_HTTPS}"
+
+            helm upgrade --install django-app deploy-repo/charts/django-app \
+              --namespace default \
+              --kube-apiserver "${API_SERVER}" \
+              --kube-token "${TOKEN}" \
+              --kube-ca-file "${CA_CERT}" \
+              -f deploy-repo/charts/django-app/secret-values.yaml \
+              --set image.repository="${ECR_REPOSITORY}" \
+              --set image.tag="${IMAGE_TAG}" \
+              --set postgresql.storageClass=gp2 \
+              --set replicaCount=1 \
+              --set autoscaling.minReplicas=1 \
+              --set service.type=LoadBalancer
+          '''
         }
       }
     }
