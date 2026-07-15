@@ -59,7 +59,7 @@ def home(request):
                 <strong>✅ Статус:</strong> Проєкт успішно запущено
             </div>
             <div class="status">
-                <strong>✅ Pipeline:</strong> Працює
+                <strong>✅ Pipeline:</strong> Працює 2
             </div>
             <div class="info">
                 <h2>Налаштування проєкту:</h2>
