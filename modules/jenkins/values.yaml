@@ -15,12 +15,6 @@ controller:
 %{ endfor ~}
 
 %{ if bootstrap_pipeline_enabled ~}
-  additionalSecrets:
-    - name: git-username
-      value: "${git_username}"
-    - name: git-token
-      value: "${git_token}"
-
   JCasC:
     configScripts:
       bootstrap-credentials: |
@@ -31,14 +25,14 @@ controller:
                   - usernamePassword:
                       scope: GLOBAL
                       id: "${pipeline_repo_credentials_id}"
-                      username: "${git-username}"
-                      password: "${git-token}"
+                      username: "${git_username}"
+                      password: "${git_token}"
                       description: "Pipeline SCM credentials"
                   - usernamePassword:
                       scope: GLOBAL
                       id: "${gitops_credentials_id}"
-                      username: "${git-username}"
-                      password: "${git-token}"
+                      username: "${git_username}"
+                      password: "${git_token}"
                       description: "GitOps repository credentials"
       bootstrap-jobs: |
         jobs:

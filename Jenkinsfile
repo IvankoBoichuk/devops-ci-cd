@@ -10,7 +10,7 @@ spec:
   serviceAccountName: jenkins-sa
   containers:
     - name: git
-      image: alpine/git:2.47.0
+      image: alpine/git:2.45.2
       command:
         - cat
       tty: true
