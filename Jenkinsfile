@@ -135,12 +135,13 @@ spec:
               --kube-apiserver "${API_SERVER}" \
               --kube-token "${TOKEN}" \
               --kube-ca-file "${CA_CERT}" \
-              -f deploy-repo/charts/django-app/secret-values.yaml \
               --set image.repository="${ECR_REPOSITORY}" \
               --set image.tag="${IMAGE_TAG}" \
               --set postgresql.storageClass=gp2 \
               --set replicaCount=1 \
               --set autoscaling.minReplicas=1 \
+              --set secret.create=false \
+              --set secret.existingSecret=django-app-app \
               --set service.type=LoadBalancer
           '''
         }
