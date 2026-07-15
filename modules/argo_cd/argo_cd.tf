@@ -14,6 +14,9 @@ resource "helm_release" "argo_cd" {
   values = [
     templatefile("${path.module}/values.yaml", {
       service_type = var.service_type
+      repo_url     = var.repo_url
+      repo_username = var.repo_username
+      repo_password = var.repo_password
     })
   ]
 }
@@ -46,14 +49,6 @@ resource "helm_release" "applications" {
 
   values = [
     yamlencode({
-      repositories = [
-        {
-          name     = "primary-repo"
-          url      = var.repo_url
-          username = var.repo_username
-          password = var.repo_password
-        }
-      ]
       applications = [
         for app in var.applications : {
           name             = app.name

@@ -13,10 +13,17 @@ server:
 configs:
   params:
     server.insecure: true
-  repositories: |
-    - url: https://github.com/IvankoBoichuk/devops-ci-cd.git
-      name: main-repo
+  repositories:
+    main-repo:
+      url: ${repo_url}
       type: git
+      name: main-repo
+%{ if repo_username != "" ~}
+      username: ${repo_username}
+%{ endif ~}
+%{ if repo_password != "" ~}
+      password: ${repo_password}
+%{ endif ~}
 
 repoServer:
   replicas: 1
