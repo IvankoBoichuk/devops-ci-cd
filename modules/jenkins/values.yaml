@@ -14,6 +14,54 @@ controller:
     - "${plugin}"
 %{ endfor ~}
 
+%{ if bootstrap_pipeline_enabled ~}
+  additionalSecrets:
+    - name: git-username
+      value: "${git_username}"
+    - name: git-token
+      value: "${git_token}"
+
+  JCasC:
+    configScripts:
+      bootstrap-credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "${pipeline_repo_credentials_id}"
+                      username: "${git-username}"
+                      password: "${git-token}"
+                      description: "Pipeline SCM credentials"
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "${gitops_credentials_id}"
+                      username: "${git-username}"
+                      password: "${git-token}"
+                      description: "GitOps repository credentials"
+      bootstrap-jobs: |
+        jobs:
+          - script: >
+              pipelineJob('${pipeline_job_name}') {
+                definition {
+                  cpsScm {
+                    scm {
+                      git {
+                        remote {
+                          url('${pipeline_repo_url}')
+                          credentials('${pipeline_repo_credentials_id}')
+                        }
+                        branch('*/${pipeline_repo_branch}')
+                      }
+                    }
+                    scriptPath('${pipeline_script_path}')
+                    lightweight(true)
+                  }
+                }
+              }
+%{ endif ~}
+
   resources:
     requests:
       cpu: "${controller_cpu_request}"

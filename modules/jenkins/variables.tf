@@ -3,6 +3,16 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider"
+  type        = string
+}
+
+variable "oidc_provider_url" {
+  description = "URL of the EKS OIDC provider"
+  type        = string
+}
+
 variable "namespace" {
   description = "Namespace for Jenkins"
   type        = string
@@ -30,7 +40,6 @@ variable "admin_username" {
 variable "admin_password" {
   description = "Jenkins admin password"
   type        = string
-  default     = "admin123"
   sensitive   = true
 }
 
@@ -90,7 +99,65 @@ variable "install_plugins" {
     "workflow-aggregator",
     "git",
     "configuration-as-code",
+    "credentials-binding",
+    "job-dsl",
   ]
+}
+
+variable "bootstrap_pipeline_enabled" {
+  description = "Enable Jenkins Configuration as Code bootstrap for credentials and pipeline job"
+  type        = bool
+  default     = false
+}
+
+variable "pipeline_job_name" {
+  description = "Name of the Jenkins pipeline job created by JCasC"
+  type        = string
+  default     = "django-kaniko-pipeline"
+}
+
+variable "pipeline_repo_url" {
+  description = "Git repository URL containing the Jenkinsfile"
+  type        = string
+  default     = ""
+}
+
+variable "pipeline_repo_branch" {
+  description = "Git branch for the pipeline repository"
+  type        = string
+  default     = "main"
+}
+
+variable "pipeline_script_path" {
+  description = "Path to Jenkinsfile inside the pipeline repository"
+  type        = string
+  default     = "Jenkinsfile"
+}
+
+variable "pipeline_repo_credentials_id" {
+  description = "Credentials ID used by Jenkins to clone the pipeline repository"
+  type        = string
+  default     = "pipeline-repo-creds"
+}
+
+variable "gitops_credentials_id" {
+  description = "Credentials ID used by the pipeline to push deployment changes"
+  type        = string
+  default     = "gitops-repo-creds"
+}
+
+variable "git_username" {
+  description = "Git username for repository access"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "git_token" {
+  description = "Git token/password for repository access"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "ingress_enabled" {

@@ -46,3 +46,16 @@ variable "common_tags" {
     ManagedBy = "Terraform"
   }
 }
+
+# Змінні для Jenkins
+variable "git_token" {
+  description = "GitHub token for Jenkins JCasC"
+  type        = string
+  sensitive   = true
+}
+
+variable "jenkins_admin_password" {
+  description = "Jenkins admin password"
+  type        = string
+  sensitive   = true
+}

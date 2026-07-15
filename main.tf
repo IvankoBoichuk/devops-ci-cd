@@ -38,6 +38,17 @@ provider "helm" {
   }
 }
 
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.eks.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.eks.name]
+  }
+}
+
 # Підключаємо модуль S3 та DynamoDB
 module "s3_backend" {
   source              = "./modules/s3-backend"
@@ -83,10 +94,24 @@ module "eks" {
 }
 
 module "jenkins" {
-  source       = "./modules/jenkins"
-  cluster_name = module.eks.eks_cluster_name
+  source            = "./modules/jenkins"
+  cluster_name      = module.eks.eks_cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+
+  bootstrap_pipeline_enabled = true
+
+  pipeline_job_name    = "django-kaniko-pipeline"
+  pipeline_repo_url    = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
+  pipeline_repo_branch = "lesson-8-9"
+  pipeline_script_path = "Jenkinsfile"
+
+  admin_password = var.jenkins_admin_password
+  git_username = "IvankoBoichuk"
+  git_token    = var.git_token
 
   providers = {
-    helm = helm
+    helm       = helm
+    kubernetes = kubernetes
   }
 }

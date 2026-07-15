@@ -12,3 +12,13 @@ output "eks_node_role_arn" {
   description = "IAM role ARN for EKS Worker Nodes"
   value       = aws_iam_role.nodes.arn
 }
+
+output "oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider"
+  value       = aws_iam_openid_connect_provider.eks.arn
+}
+
+output "oidc_provider_url" {
+  description = "URL of the EKS OIDC provider"
+  value       = aws_eks_cluster.eks.identity[0].oidc[0].issuer
+}
