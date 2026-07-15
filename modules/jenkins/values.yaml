@@ -1,0 +1,41 @@
+fullnameOverride: ${release_name}
+
+controller:
+  admin:
+    username: "${admin_username}"
+    password: "${admin_password}"
+    createSecret: true
+
+  serviceType: ${service_type}
+  servicePort: ${service_port}
+
+  installPlugins:
+%{ for plugin in install_plugins ~}
+    - "${plugin}"
+%{ endfor ~}
+
+  resources:
+    requests:
+      cpu: "${controller_cpu_request}"
+      memory: "${controller_memory_request}"
+    limits:
+      cpu: "${controller_cpu_limit}"
+      memory: "${controller_memory_limit}"
+
+  ingress:
+    enabled: ${ingress_enabled}
+    ingressClassName: "${ingress_class_name}"
+    hostName: "${ingress_host}"
+    tls:
+%{ if ingress_enabled && ingress_host != "" ~}
+      - secretName: "${ingress_tls_secret_name}"
+        hosts:
+          - "${ingress_host}"
+%{ else ~}
+      []
+%{ endif ~}
+
+persistence:
+  enabled: true
+  storageClass: "${storage_class}"
+  size: "${storage_size}"

@@ -22,6 +22,22 @@ locals {
 # Отримання поточного AWS Account ID
 data "aws_caller_identity" "current" {}
 
+data "aws_eks_cluster" "eks" {
+  name = local.eks_cluster_name
+}
+
+provider "helm" {
+  kubernetes = {
+    host                   = data.aws_eks_cluster.eks.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+    exec = {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.eks.name]
+    }
+  }
+}
+
 # Підключаємо модуль S3 та DynamoDB
 module "s3_backend" {
   source              = "./modules/s3-backend"
@@ -57,11 +73,20 @@ module "eks" {
   endpoint_private_access = true
   endpoint_public_access  = true
 
-  # Налаштування worker nodes (Free Tier)
-  instance_type = "t3.small"
-  desired_size  = 1
+  # Налаштування worker nodes для application workloads та Jenkins
+  instance_type = "t3.medium"
+  desired_size  = 2
   max_size      = 2
-  min_size      = 1
+  min_size      = 2
 
   tags = local.common_tags
+}
+
+module "jenkins" {
+  source       = "./modules/jenkins"
+  cluster_name = module.eks.eks_cluster_name
+
+  providers = {
+    helm = helm
+  }
 }

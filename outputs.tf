@@ -76,3 +76,24 @@ output "eks_node_role_arn" {
   description = "ARN IAM ролі для EKS Worker Nodes"
   value       = module.eks.eks_node_role_arn
 }
+
+output "jenkins_release" {
+  description = "Jenkins Helm release name"
+  value       = module.jenkins.jenkins_release_name
+}
+
+output "jenkins_namespace" {
+  description = "Namespace where Jenkins is installed"
+  value       = module.jenkins.jenkins_namespace
+}
+
+output "jenkins_url" {
+  description = "URL for accessing Jenkins"
+  value       = module.jenkins.jenkins_url
+}
+
+output "jenkins_admin_password" {
+  description = "Jenkins admin password"
+  value       = module.jenkins.jenkins_admin_password
+  sensitive   = true
+}
