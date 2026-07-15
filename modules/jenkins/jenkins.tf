@@ -107,3 +107,65 @@ resource "kubernetes_service_account" "jenkins_sa" {
 
   depends_on = [helm_release.jenkins]
 }
+
+resource "kubernetes_role" "deploy_manager" {
+  metadata {
+    name      = "jenkins-deploy-manager"
+    namespace = var.deploy_namespace
+  }
+
+  rule {
+    api_groups = [""]
+    resources = [
+      "configmaps",
+      "endpoints",
+      "persistentvolumeclaims",
+      "pods",
+      "secrets",
+      "serviceaccounts",
+      "services",
+    ]
+    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+
+  rule {
+    api_groups = ["apps"]
+    resources = [
+      "deployments",
+      "replicasets",
+      "statefulsets",
+    ]
+    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+
+  rule {
+    api_groups = ["autoscaling"]
+    resources = ["horizontalpodautoscalers"]
+    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources = ["ingresses"]
+    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+}
+
+resource "kubernetes_role_binding" "deploy_manager" {
+  metadata {
+    name      = "jenkins-deploy-manager"
+    namespace = var.deploy_namespace
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role.deploy_manager.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account.jenkins_sa.metadata[0].name
+    namespace = var.namespace
+  }
+}

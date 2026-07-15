@@ -158,6 +158,12 @@ variable "pipeline_deploy_branch" {
   default     = "main"
 }
 
+variable "deploy_namespace" {
+  description = "Kubernetes namespace where the application Helm release is deployed"
+  type        = string
+  default     = "default"
+}
+
 variable "pipeline_repo_credentials_id" {
   description = "Credentials ID used by Jenkins to clone the pipeline repository"
   type        = string
