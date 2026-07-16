@@ -208,7 +208,7 @@ terraform output jenkins_url
 Швидка перевірка з терміналу:
 
 ```bash
-git show lesson-8-9:charts/django-app/values.yaml | rg "tag:"
+git show final-project:charts/django-app/values.yaml | rg "tag:"
 ```
 
 ### Як побачити результат в Argo CD

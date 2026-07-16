@@ -49,7 +49,7 @@ spec:
     string(name: 'ECR_REPOSITORY', defaultValue: '', description: 'Full ECR repository URL, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/app')
     string(name: 'DEPLOY_REPO_URL', defaultValue: '', description: 'HTTPS URL of the GitOps/deployment repository to update')
     string(name: 'DEPLOY_VALUES_FILE', defaultValue: 'charts/django-app/values.yaml', description: 'Path to values.yaml inside deployment repository')
-    string(name: 'DEPLOY_BRANCH', defaultValue: 'lesson-8-9', description: 'Branch in the deployment repository to update')
+    string(name: 'DEPLOY_BRANCH', defaultValue: 'final-project', description: 'Branch in the deployment repository to update')
   }
 
   stages {

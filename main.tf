@@ -110,12 +110,12 @@ module "jenkins" {
 
   pipeline_job_name    = "django-kaniko-pipeline"
   pipeline_repo_url    = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
-  pipeline_repo_branch = "lesson-8-9"
+  pipeline_repo_branch = "final-project"
   pipeline_script_path = "Jenkinsfile"
   pipeline_ecr_repository  = module.ecr.repository_url
   pipeline_deploy_repo_url = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
   pipeline_deploy_values_file = "charts/django-app/values.yaml"
-  pipeline_deploy_branch = "lesson-8-9"
+  pipeline_deploy_branch = "final-project"
 
   admin_password = var.jenkins_admin_password
   git_username = "IvankoBoichuk"
@@ -140,7 +140,7 @@ module "argo_cd" {
     {
       name            = "django-app"
       namespace       = "argocd"
-      target_revision = "lesson-8-9"
+      target_revision = "final-project"
       path            = "charts/django-app"
       destination_ns  = "default"
       helm_parameters = [
