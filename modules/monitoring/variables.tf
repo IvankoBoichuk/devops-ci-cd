@@ -25,13 +25,13 @@ variable "grafana_admin_password" {
 variable "grafana_service_type" {
   description = "Service type for Grafana"
   type        = string
-  default     = "ClusterIP"
+  default     = "LoadBalancer"
 }
 
 variable "prometheus_service_type" {
   description = "Service type for Prometheus"
   type        = string
-  default     = "ClusterIP"
+  default     = "LoadBalancer"
 }
 
 variable "storage_class" {
