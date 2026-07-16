@@ -1,0 +1,39 @@
+grafana:
+  adminUser: admin
+  adminPassword: ${grafana_admin_password}
+  service:
+    type: ${grafana_service_type}
+    port: 80
+    targetPort: 3000
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: ${storage_class}
+    size: ${grafana_storage_size}
+
+prometheus:
+  service:
+    type: ${prometheus_service_type}
+  prometheusSpec:
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ${storage_class}
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: ${prometheus_storage_size}
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ${storage_class}
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi

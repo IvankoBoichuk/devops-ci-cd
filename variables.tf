@@ -60,14 +60,73 @@ variable "jenkins_admin_password" {
   sensitive   = true
 }
 
-variable "django_db_password" {
-  description = "Database password for django-app"
+variable "django_secret_key" {
+  description = "Django SECRET_KEY for django-app"
   type        = string
   sensitive   = true
 }
 
-variable "django_secret_key" {
-  description = "Django SECRET_KEY for django-app"
+variable "rds_db_name" {
+  description = "RDS database name for django-app"
+  type        = string
+  default     = "djangodb"
+}
+
+variable "rds_db_username" {
+  description = "RDS database username for django-app"
+  type        = string
+  default     = "djangouser"
+}
+
+variable "rds_db_password" {
+  description = "RDS database password for django-app"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[\\x21\\x23-\\x2E\\x30-\\x3F\\x41-\\x5B\\x5D-\\x7E]{8,128}$", var.rds_db_password))
+    error_message = "rds_db_password must be 8-128 printable ASCII characters and must not contain space, double quote, slash, or @."
+  }
+}
+
+variable "rds_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "rds_allocated_storage" {
+  description = "Allocated storage for RDS in GiB"
+  type        = number
+  default     = 20
+}
+
+variable "rds_max_allocated_storage" {
+  description = "Maximum autoscaled storage for RDS in GiB"
+  type        = number
+  default     = 100
+}
+
+variable "rds_deletion_protection" {
+  description = "Enable deletion protection for RDS"
+  type        = bool
+  default     = false
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "Skip final snapshot when destroying RDS"
+  type        = bool
+  default     = true
+}
+
+variable "rds_backup_retention_period" {
+  description = "Backup retention period for RDS in days"
+  type        = number
+  default     = 7
+}
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password"
   type        = string
   sensitive   = true
 }

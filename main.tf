@@ -15,6 +15,7 @@ locals {
   vpc_name         = "${var.project_name}-${var.environment}-vpc"
   ecr_name         = "${var.project_name}-${var.environment}-ecr"
   eks_cluster_name = var.eks_cluster_name != "" ? var.eks_cluster_name : "${var.project_name}-${var.environment}-eks"
+  rds_identifier   = "${var.project_name}-${var.environment}-postgres"
 }
 
 data "aws_eks_cluster" "eks" {
@@ -81,6 +82,24 @@ module "eks" {
   tags = local.common_tags
 }
 
+module "rds" {
+  source              = "./modules/rds"
+  identifier          = local.rds_identifier
+  db_name             = var.rds_db_name
+  username            = var.rds_db_username
+  password            = var.rds_db_password
+  instance_class      = var.rds_instance_class
+  allocated_storage   = var.rds_allocated_storage
+  max_allocated_storage = var.rds_max_allocated_storage
+  subnet_ids          = module.vpc.private_subnet_ids
+  vpc_id              = module.vpc.vpc_id
+  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
+  deletion_protection = var.rds_deletion_protection
+  skip_final_snapshot = var.rds_skip_final_snapshot
+  backup_retention_period = var.rds_backup_retention_period
+  tags                = local.common_tags
+}
+
 module "jenkins" {
   source            = "./modules/jenkins"
   cluster_name      = module.eks.eks_cluster_name
@@ -114,7 +133,8 @@ module "jenkins" {
 module "argo_cd" {
   source   = "./modules/argo_cd"
   repo_url = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
-  django_db_password = var.django_db_password
+  django_db_user     = var.rds_db_username
+  django_db_password = var.rds_db_password
   django_secret_key  = var.django_secret_key
   applications = [
     {
@@ -133,6 +153,10 @@ module "argo_cd" {
           value = "gp2"
         },
         {
+          name  = "postgresql.enabled"
+          value = "false"
+        },
+        {
           name  = "replicaCount"
           value = "1"
         },
@@ -147,10 +171,34 @@ module "argo_cd" {
         {
           name  = "secret.existingSecret"
           value = "django-app-app"
+        },
+        {
+          name  = "config.DB_HOST"
+          value = module.rds.db_endpoint
+        },
+        {
+          name  = "config.DB_PORT"
+          value = tostring(module.rds.db_port)
+        },
+        {
+          name  = "config.DB_NAME"
+          value = module.rds.db_name
         }
       ]
     }
   ]
+
+  providers = {
+    helm       = helm
+    kubernetes = kubernetes
+  }
+
+  depends_on = [module.eks, module.rds]
+}
+
+module "monitoring" {
+  source                 = "./modules/monitoring"
+  grafana_admin_password = var.grafana_admin_password
 
   providers = {
     helm       = helm

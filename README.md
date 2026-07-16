@@ -1,10 +1,15 @@
 # Terraform AWS Infrastructure
 
-Цей проект налаштовує базову інфраструктуру AWS за допомогою Terraform, включаючи:
+Цей проект налаштовує фінальну інфраструктуру AWS за допомогою Terraform, включаючи:
 - S3 бакет для зберігання Terraform state файлів з версіюванням
 - DynamoDB таблицю для блокування state файлів
 - VPC з публічними та приватними підмережами (3-зональна архітектура)
+- EKS кластер для Kubernetes workloads
+- RDS PostgreSQL у приватних підмережах
 - ECR репозиторій для Docker образів з автоматичним скануванням
+- Jenkins для CI
+- Argo CD для GitOps
+- Prometheus і Grafana для моніторингу
 
 ## Загальна архітектура
 
@@ -47,13 +52,8 @@
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │                 ECR - Container Registry                    │  │
-│  │  ┌────────────────────────────────────────────────────┐     │  │
-│  │  │  Repository: lesson-5-ecr                          │     │  │
-│  │  │  - Scan on push: ✓                                 │     │  │
-│  │  │  - Lifecycle: Keep 10 images                       │     │  │
-│  │  │  - Access policy: Current account + ECS + Lambda   │     │  │
-│  │  └────────────────────────────────────────────────────┘     │  │
+│  │       EKS + CI/CD + Monitoring                             │  │
+│  │  ECR + Jenkins + Argo CD + Prometheus + Grafana            │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -69,7 +69,12 @@
 ├── modules/
 │   ├── s3-backend/      # Модуль для S3 та DynamoDB
 │   ├── vpc/             # Модуль для VPC
-│   └── ecr/             # Модуль для ECR
+│   ├── ecr/             # Модуль для ECR
+│   ├── eks/             # Модуль для EKS
+│   ├── rds/             # Модуль для PostgreSQL в RDS
+│   ├── jenkins/         # Модуль для Jenkins
+│   ├── argo_cd/         # Модуль для Argo CD
+│   └── monitoring/      # Prometheus + Grafana
 ```
 
 ## Jenkins + Argo CD Workflow
@@ -85,8 +90,9 @@ cp terraform.tfvars.example terraform.tfvars
 2. Заповніть у `terraform.tfvars` секретні значення:
 - `jenkins_admin_password`
 - `git_token`
-- `django_db_password`
+- `rds_db_password`
 - `django_secret_key`
+- `grafana_admin_password`
 
 3. Спочатку створіть backend через окремий bootstrap stack:
 
@@ -118,6 +124,9 @@ terraform output jenkins_admin_password
 terraform output argo_cd_url
 terraform output argo_cd_admin_password
 terraform output ecr_repository_url
+terraform output rds_endpoint
+terraform output grafana_service_name
+terraform output prometheus_service_name
 ```
 
 7. Після застосування перевірте базовий стан кластера:
@@ -126,7 +135,21 @@ terraform output ecr_repository_url
 kubectl get nodes
 kubectl get pods -n jenkins
 kubectl get pods -n argocd
+kubectl get pods -n monitoring
 kubectl get applications -n argocd
+```
+
+9. Перевірка сервісів для фінального захисту:
+
+```bash
+kubectl get all -n jenkins
+kubectl get all -n argocd
+kubectl get all -n monitoring
+
+kubectl port-forward svc/jenkins 8080:8080 -n jenkins
+kubectl port-forward svc/argocd-server 8081:443 -n argocd
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring
 ```
 
 8. Швидкий доступ до Jenkins, Argo CD і сайту:

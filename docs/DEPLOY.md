@@ -1,4 +1,4 @@
-# Розгортання Django в EKS
+# Розгортання фінального стеку в EKS
 
 Застосунок не встановлюється на EC2 вручну. EKS створює EC2 worker nodes, Docker-образ
 зберігається в ECR, а Kubernetes завантажує його з ECR і запускає через Deployment.
@@ -52,26 +52,62 @@ kubectl get nodes
 kubectl top nodes
 ```
 
-## 4. Встановити Helm chart
+## 4. Застосувати основний Terraform stack
 
-Замініть пароль і Django secret key у локальному `charts/django-app/secret-values.yaml`.
-Цей файл доданий до `.gitignore` і не повинен потрапляти в Git.
+Стек піднімає:
+- `VPC`
+- `EKS`
+- `RDS PostgreSQL`
+- `ECR`
+- `Jenkins`
+- `Argo CD`
+- `Prometheus + Grafana`
+
+Потрібні секрети в `terraform.tfvars`:
+- `jenkins_admin_password`
+- `git_token`
+- `rds_db_password`
+- `django_secret_key`
+- `grafana_admin_password`
 
 ```bash
-helm upgrade --install django-app charts/django-app \
-  -f charts/django-app/secret-values.yaml \
-  --set image.repository="$(terraform output -raw ecr_repository_url)" \
-  --set image.tag=latest
+terraform apply
+```
 
-kubectl get pods
-kubectl get service django-app-django
+## 5. Перевірити namespaces і workloads
+
+```bash
+kubectl get all -n jenkins
+kubectl get all -n argocd
+kubectl get all -n monitoring
+kubectl get applications -n argocd
 kubectl get hpa
 ```
 
-Зовнішня адреса з'явиться в полі `EXTERNAL-IP` сервісу типу LoadBalancer.
+## 6. Перевірити доступність сервісів
 
-## Бонус: Ingress і TLS
+```bash
+kubectl port-forward svc/jenkins 8080:8080 -n jenkins
+kubectl port-forward svc/argocd-server 8081:443 -n argocd
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring
+```
 
-Ingress за замовчуванням вимкнений, тому обов'язковий LoadBalancer працює без nginx
-Ingress Controller. Для бонусу спочатку встановіть ingress-nginx і cert-manager, а потім
-увімкніть `ingress.enabled=true` та задайте власний `ingress.host`.
+Після цього відкрийте:
+- Jenkins: `http://localhost:8080`
+- Argo CD: `https://localhost:8081`
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+
+Grafana credentials:
+- username: `admin`
+- password: `terraform output -raw grafana_admin_password`
+
+## 7. Перевірити, що Django використовує RDS
+
+```bash
+terraform output rds_endpoint
+kubectl get secret django-app-app -o yaml
+kubectl get deployment django-app-django -o jsonpath='{.spec.template.spec.containers[0].envFrom}'
+echo
+```

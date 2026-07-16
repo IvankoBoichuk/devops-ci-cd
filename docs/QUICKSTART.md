@@ -145,10 +145,10 @@ terraform destroy -target=module.ecr
 
 ## Наступні кроки
 
-1. **Додайте RDS** для бази даних у приватних підмережах
-2. **Налаштуйте ECS** для запуску контейнерів
-3. **Додайте ALB** для розподілу трафіку
-4. **Налаштуйте CI/CD** через GitHub Actions або GitLab CI
-5. **Додайте моніторинг** через CloudWatch та SNS
+1. **Запустіть повний smoke test** через `terraform apply` і `kubectl get all -n jenkins|argocd|monitoring`
+2. **Перевірте port-forward доступ** до Jenkins, Argo CD, Grafana і Prometheus
+3. **Підтвердіть роботу RDS** через `terraform output rds_endpoint` і env-конфіг Deployment
+4. **Додайте alerting** для Grafana/Prometheus під ваші demo-сценарії
+5. **Підготуйте коротку demo-послідовність** Jenkins -> ECR -> Argo CD -> Grafana
 
 Дивіться [README.md](README.md) для детальної документації.
