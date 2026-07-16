@@ -1,6 +1,0 @@
-apiVersion: v2
-name: argo-cd-apps
-description: Helm chart for Argo CD applications and repository secrets
-type: application
-version: 0.1.0
-appVersion: "1.0.0"

@@ -1,74 +1,31 @@
-# Terraform files
+# Terraform
 .terraform/
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
-*.tfstate.backup
 crash.log
 crash.*.log
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Terraform variables
+*.tfvars
+*.tfvars.json
+
+# Plan files
+*.tfplan
+plan.out
+
+# CLI config
 .terraformrc
 terraform.rc
 
-# Terraform plan files
-*.tfplan
-tfplan
-plan.out
-
-# Terraform variable files with sensitive data
-*.tfvars
-!example.tfvars
-*.auto.tfvars
-.terraform.tfvars
-
-# AWS credentials and config
-aws
-.aws/
-*.pem
-*.key
-
-# Environment variables
-.env
-.env.local
-.envrc
-
-# IDE and Editor files
-.vscode/
+# Editor and OS files
 .idea/
+.vscode/
 *.swp
 *.swo
-*~
 .DS_Store
-
-# Python (if using scripts)
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-*.tmp
-tmp/
-temp/
-
-# Backup files
-*.bak
-*.backup
-
-# OS files
 Thumbs.db
-.DS_Store
-.directory
-
-# Local Helm values containing credentials
-charts/django-app/secret-values.yaml

@@ -1,17 +1,6 @@
-# Outputs для VPC
 output "vpc_id" {
   description = "ID VPC"
   value       = module.vpc.vpc_id
-}
-
-output "vpc_cidr_block" {
-  description = "CIDR блок VPC"
-  value       = module.vpc.vpc_cidr_block
-}
-
-output "public_subnet_ids" {
-  description = "Список ID публічних підмереж"
-  value       = module.vpc.public_subnet_ids
 }
 
 output "private_subnet_ids" {
@@ -19,71 +8,22 @@ output "private_subnet_ids" {
   value       = module.vpc.private_subnet_ids
 }
 
-output "nat_gateway_public_ip" {
-  description = "Публічний IP адрес NAT Gateway"
-  value       = module.vpc.nat_gateway_public_ip
+output "rds_endpoint" {
+  description = "Writer endpoint бази даних"
+  value       = module.rds.endpoint
 }
 
-# Outputs для ECR
-output "ecr_repository_url" {
-  description = "URL ECR репозиторію"
-  value       = module.ecr.repository_url
+output "rds_reader_endpoint" {
+  description = "Reader endpoint для Aurora або endpoint інстансу для звичайного RDS"
+  value       = module.rds.reader_endpoint
 }
 
-output "ecr_repository_name" {
-  description = "Назва ECR репозиторію"
-  value       = module.ecr.repository_name
+output "rds_security_group_id" {
+  description = "ID security group для бази даних"
+  value       = module.rds.security_group_id
 }
 
-# Outputs для EKS
-output "eks_cluster_endpoint" {
-  description = "Endpoint EKS кластера для підключення"
-  value       = module.eks.eks_cluster_endpoint
-}
-
-output "eks_cluster_name" {
-  description = "Назва EKS кластера"
-  value       = module.eks.eks_cluster_name
-}
-
-output "eks_node_role_arn" {
-  description = "ARN IAM ролі для EKS Worker Nodes"
-  value       = module.eks.eks_node_role_arn
-}
-
-output "jenkins_release" {
-  description = "Jenkins Helm release name"
-  value       = module.jenkins.jenkins_release_name
-}
-
-output "jenkins_namespace" {
-  description = "Namespace where Jenkins is installed"
-  value       = module.jenkins.jenkins_namespace
-}
-
-output "jenkins_url" {
-  description = "URL for accessing Jenkins"
-  value       = module.jenkins.jenkins_url
-}
-
-output "jenkins_admin_password" {
-  description = "Jenkins admin password"
-  value       = module.jenkins.jenkins_admin_password
-  sensitive   = true
-}
-
-output "argo_cd_namespace" {
-  description = "Namespace where Argo CD is installed"
-  value       = module.argo_cd.argo_cd_namespace
-}
-
-output "argo_cd_url" {
-  description = "URL for accessing Argo CD"
-  value       = module.argo_cd.argo_cd_url
-}
-
-output "argo_cd_admin_password" {
-  description = "Initial Argo CD admin password"
-  value       = module.argo_cd.argo_cd_admin_password
-  sensitive   = true
+output "rds_subnet_group_name" {
+  description = "Назва DB subnet group"
+  value       = module.rds.db_subnet_group_name
 }

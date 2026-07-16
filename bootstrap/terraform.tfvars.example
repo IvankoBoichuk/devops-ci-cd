@@ -1,7 +1,0 @@
-project_name = "lesson-5"
-environment  = "dev"
-aws_region   = "us-east-1"
-
-common_tags = {
-  ManagedBy = "Terraform"
-}
