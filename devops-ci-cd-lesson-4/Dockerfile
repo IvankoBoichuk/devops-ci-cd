@@ -4,6 +4,7 @@ FROM python:3.11-slim
 # Встановлюємо змінні оточення
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV GUNICORN_CMD_ARGS="--bind 0.0.0.0:8000 --workers 2 --threads 4 --worker-class gthread --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -"
 
 # Встановлюємо робочу директорію
 WORKDIR /app
@@ -29,5 +30,5 @@ RUN python manage.py collectstatic --noinput || true
 # Відкриваємо порт 8000
 EXPOSE 8000
 
-# Запускаємо Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app.wsgi:application"]
+# Запускаємо Gunicorn з кількома воркерами, щоб одиничні завислі з'єднання не блокували весь pod
+CMD ["gunicorn", "app.wsgi:application"]
