@@ -65,6 +65,7 @@
 ├── main.tf              # Головний файл конфігурації
 ├── backend.tf           # Налаштування backend для Terraform state
 ├── outputs.tf           # Виведення значень
+├── bootstrap/           # Окремий stack для S3 backend і lock table
 ├── modules/
 │   ├── s3-backend/      # Модуль для S3 та DynamoDB
 │   ├── vpc/             # Модуль для VPC
@@ -87,19 +88,29 @@ cp terraform.tfvars.example terraform.tfvars
 - `django_db_password`
 - `django_secret_key`
 
-3. Ініціалізуйте Terraform:
+3. Спочатку створіть backend через окремий bootstrap stack:
 
 ```bash
-terraform init -upgrade
+cd bootstrap
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform apply
+cd ..
 ```
 
-4. Застосуйте інфраструктуру:
+4. Після цього ініціалізуйте основний stack на S3 backend:
+
+```bash
+terraform init -upgrade -reconfigure
+```
+
+5. Застосуйте інфраструктуру:
 
 ```bash
 terraform apply
 ```
 
-5. Корисні outputs після успішного `apply`:
+6. Корисні outputs після успішного `apply`:
 
 ```bash
 terraform output jenkins_url
@@ -107,6 +118,43 @@ terraform output jenkins_admin_password
 terraform output argo_cd_url
 terraform output argo_cd_admin_password
 terraform output ecr_repository_url
+```
+
+7. Після застосування перевірте базовий стан кластера:
+
+```bash
+kubectl get nodes
+kubectl get pods -n jenkins
+kubectl get pods -n argocd
+kubectl get applications -n argocd
+```
+
+8. Швидкий доступ до Jenkins, Argo CD і сайту:
+
+```bash
+# Argo CD URL
+terraform output -raw argo_cd_url
+
+# Argo CD admin password
+terraform output -raw argo_cd_admin_password
+
+# Jenkins services
+kubectl get svc -n jenkins
+
+# Якщо Jenkins має LoadBalancer, дивіться EXTERNAL-IP/hostname
+kubectl get svc -n jenkins jenkins
+
+# Jenkins admin password
+terraform output -raw jenkins_admin_password
+
+# Якщо Jenkins ще без зовнішнього LoadBalancer
+kubectl port-forward -n jenkins svc/jenkins 8080:8080
+
+# Django service / зовнішня адреса сайту
+kubectl get svc django-app-django
+
+# Повний список зовнішніх сервісів
+kubectl get svc -A
 ```
 
 ### Як перевірити Jenkins job
@@ -156,6 +204,12 @@ terraform output argo_cd_url
 terraform output argo_cd_admin_password
 ```
 
+Або напряму:
+
+```bash
+terraform output -raw argo_cd_url
+```
+
 3. Перевірте, що застосунок `django-app` існує:
 
 ```bash
@@ -183,6 +237,22 @@ echo
 kubectl get svc django-app-django
 curl http://<LOADBALANCER-HOSTNAME>/
 ```
+
+Для Jenkins:
+
+```bash
+kubectl get svc -n jenkins
+kubectl get svc -n jenkins jenkins
+terraform output -raw jenkins_admin_password
+```
+
+Якщо Jenkins не має зовнішнього `LoadBalancer`, використайте:
+
+```bash
+kubectl port-forward -n jenkins svc/jenkins 8080:8080
+```
+
+і відкрийте `http://localhost:8080`.
 
 ### Загальна схема
 
@@ -489,58 +559,42 @@ aws ecr describe-image-scan-findings \
 
 ### Крок 1: Замініть placeholder значення
 
-У файлі `main.tf` та `backend.tf` замініть `"ваше ім'я"` на унікальну назву для вашого S3 бакета:
+У файлі `backend.tf` вкажіть правильну назву S3 bucket, яку створить bootstrap stack:
 
 ```hcl
-# main.tf
-module "s3_backend" {
-  source              = "./modules/s3-backend"
-  bucket_name         = "your-unique-bucket-name-terraform-state"  # Замініть це
-  dynamodb_table_name = "terraform-locks"
-  ...
-}
-
 # backend.tf
 terraform {
   backend "s3" {
-    bucket         = "your-unique-bucket-name-terraform-state"  # Замініть це
-    key            = "lesson-5/terraform.tfstate"
-    region         = "us-west-2"
-    dynamodb_table = "terraform-locks"
-    encrypt        = true
+    bucket       = "lesson-5-terraform-state-<account-id>"
+    key          = "lesson-5/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 ```
 
-### Крок 2: Перше розгортання (без backend)
-
-Спочатку потрібно створити S3 бакет та DynamoDB таблицю. Тимчасово закоментуйте блок `backend` у файлі `backend.tf`:
-
-```hcl
-# terraform {
-#   backend "s3" {
-#     ...
-#   }
-# }
-```
-
-Потім виконайте:
+### Крок 2: Створіть backend через bootstrap stack
 
 ```bash
+cd bootstrap
+cp terraform.tfvars.example terraform.tfvars
 terraform init
-terraform plan
+terraform apply
+cd ..
+```
+
+### Крок 3: Ініціалізуйте основний stack на S3 backend
+
+```bash
+terraform init -upgrade -reconfigure
+```
+
+### Крок 4: Розгорніть основну інфраструктуру
+
+```bash
 terraform apply
 ```
-
-### Крок 3: Міграція state до S3
-
-Після створення ресурсів, розкоментуйте блок `backend` у `backend.tf` та виконайте:
-
-```bash
-terraform init -migrate-state
-```
-
-Terraform запитає підтвердження для переміщення state файлу до S3.
 
 ## Використання
 
@@ -574,7 +628,7 @@ terraform output
 terraform destroy
 ```
 
-**⚠️ Увага**: Перед видаленням переконайтеся, що S3 бакет порожній, або використовуйте force delete.
+**⚠️ Увага**: Backend ресурси тепер керуються окремо через `bootstrap/`. Основний `terraform destroy` не видаляє S3 backend bucket і lock resources.
 
 ## Безпека
 

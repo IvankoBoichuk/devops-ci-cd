@@ -1,5 +1,5 @@
-# Backend конфігурація закоментована для початкового розгортання
-# Після terraform apply розкоментуйте і виконайте: terraform init -migrate-state
+# Основний stack використовує вже створений S3 backend.
+# Backend ресурси створюються окремо через каталог bootstrap/.
 
 terraform {
   backend "s3" {

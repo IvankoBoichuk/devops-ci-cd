@@ -12,15 +12,10 @@ locals {
   )
 
   # Генерація унікальних назв
-  bucket_name      = "${var.project_name}-terraform-state-${data.aws_caller_identity.current.account_id}"
-  dynamodb_table   = "${var.project_name}-terraform-locks"
   vpc_name         = "${var.project_name}-${var.environment}-vpc"
   ecr_name         = "${var.project_name}-${var.environment}-ecr"
   eks_cluster_name = var.eks_cluster_name != "" ? var.eks_cluster_name : "${var.project_name}-${var.environment}-eks"
 }
-
-# Отримання поточного AWS Account ID
-data "aws_caller_identity" "current" {}
 
 data "aws_eks_cluster" "eks" {
   name = local.eks_cluster_name
@@ -48,14 +43,6 @@ provider "kubernetes" {
     command     = "aws"
     args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.eks.name]
   }
-}
-
-# Підключаємо модуль S3 та DynamoDB
-module "s3_backend" {
-  source              = "./modules/s3-backend"
-  bucket_name         = local.bucket_name
-  dynamodb_table_name = local.dynamodb_table
-  tags                = local.common_tags
 }
 
 # Підключаємо модуль VPC
