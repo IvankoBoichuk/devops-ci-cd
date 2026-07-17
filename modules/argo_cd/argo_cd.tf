@@ -13,8 +13,8 @@ resource "helm_release" "argo_cd" {
 
   values = [
     templatefile("${path.module}/values.yaml", {
-      service_type = var.service_type
-      repo_url     = var.repo_url
+      service_type  = var.service_type
+      repo_url      = var.repo_url
       repo_username = var.repo_username
       repo_password = var.repo_password
     })
@@ -51,18 +51,26 @@ resource "helm_release" "applications" {
     yamlencode({
       applications = [
         for app in var.applications : {
-          name             = app.name
-          namespace        = app.namespace
-          project          = app.project
-          repoUrl          = coalesce(try(app.repo_url, null), var.repo_url)
-          targetRevision   = app.target_revision
-          path             = app.path
-          destinationName  = app.destination_name
+          name                 = app.name
+          namespace            = app.namespace
+          project              = app.project
+          repoUrl              = coalesce(try(app.repo_url, null), var.repo_url)
+          targetRevision       = app.target_revision
+          path                 = app.path
+          destinationName      = app.destination_name
           destinationNamespace = app.destination_ns
-          helmParameters   = app.helm_parameters
-          syncOptions      = app.sync_options
+          helmParameters       = app.helm_parameters
+          syncOptions          = app.sync_options
         }
       ]
+      repository = {
+        name      = "main-repo"
+        namespace = var.namespace
+        type      = "git"
+        url       = var.repo_url
+        username  = var.repo_username
+        password  = var.repo_password
+      }
     })
   ]
 

@@ -13,11 +13,11 @@ resource "helm_release" "monitoring" {
 
   values = [
     templatefile("${path.module}/values.yaml", {
-      grafana_admin_password = var.grafana_admin_password
-      grafana_service_type   = var.grafana_service_type
+      grafana_admin_password  = var.grafana_admin_password
+      grafana_service_type    = var.grafana_service_type
       prometheus_service_type = var.prometheus_service_type
-      storage_class          = var.storage_class
-      grafana_storage_size   = var.grafana_storage_size
+      storage_class           = var.storage_class
+      grafana_storage_size    = var.grafana_storage_size
       prometheus_storage_size = var.prometheus_storage_size
     })
   ]

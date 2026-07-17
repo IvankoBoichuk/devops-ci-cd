@@ -63,35 +63,35 @@ resource "helm_release" "jenkins" {
 
   values = [
     templatefile("${path.module}/values.yaml", {
-      release_name              = var.release_name
-      admin_username            = var.admin_username
-      admin_password            = var.admin_password
-      service_type              = var.service_type
-      service_port              = var.service_port
-      storage_class             = var.storage_class
-      storage_size              = var.storage_size
-      controller_cpu_request    = var.controller_cpu_request
-      controller_memory_request = var.controller_memory_request
-      controller_cpu_limit      = var.controller_cpu_limit
-      controller_memory_limit   = var.controller_memory_limit
-      install_plugins           = var.install_plugins
-      bootstrap_pipeline_enabled = var.bootstrap_pipeline_enabled
-      pipeline_job_name          = var.pipeline_job_name
-      pipeline_repo_url          = var.pipeline_repo_url
-      pipeline_repo_branch       = var.pipeline_repo_branch
-      pipeline_script_path       = var.pipeline_script_path
-      pipeline_ecr_repository    = var.pipeline_ecr_repository
-      pipeline_deploy_repo_url   = var.pipeline_deploy_repo_url
-      pipeline_deploy_values_file = var.pipeline_deploy_values_file
-      pipeline_deploy_branch     = var.pipeline_deploy_branch
+      release_name                 = var.release_name
+      admin_username               = var.admin_username
+      admin_password               = var.admin_password
+      service_type                 = var.service_type
+      service_port                 = var.service_port
+      storage_class                = var.storage_class
+      storage_size                 = var.storage_size
+      controller_cpu_request       = var.controller_cpu_request
+      controller_memory_request    = var.controller_memory_request
+      controller_cpu_limit         = var.controller_cpu_limit
+      controller_memory_limit      = var.controller_memory_limit
+      install_plugins              = var.install_plugins
+      bootstrap_pipeline_enabled   = var.bootstrap_pipeline_enabled
+      pipeline_job_name            = var.pipeline_job_name
+      pipeline_repo_url            = var.pipeline_repo_url
+      pipeline_repo_branch         = var.pipeline_repo_branch
+      pipeline_script_path         = var.pipeline_script_path
+      pipeline_ecr_repository      = var.pipeline_ecr_repository
+      pipeline_deploy_repo_url     = var.pipeline_deploy_repo_url
+      pipeline_deploy_values_file  = var.pipeline_deploy_values_file
+      pipeline_deploy_branch       = var.pipeline_deploy_branch
       pipeline_repo_credentials_id = var.pipeline_repo_credentials_id
-      gitops_credentials_id      = var.gitops_credentials_id
-      git_username               = var.git_username
-      git_token                  = var.git_token
-      ingress_enabled           = var.ingress_enabled
-      ingress_class_name        = var.ingress_class_name
-      ingress_host              = var.ingress_host
-      ingress_tls_secret_name   = var.ingress_tls_secret_name
+      gitops_credentials_id        = var.gitops_credentials_id
+      git_username                 = var.git_username
+      git_token                    = var.git_token
+      ingress_enabled              = var.ingress_enabled
+      ingress_class_name           = var.ingress_class_name
+      ingress_host                 = var.ingress_host
+      ingress_tls_secret_name      = var.ingress_tls_secret_name
     })
   ]
 }
@@ -140,14 +140,14 @@ resource "kubernetes_role_v1" "deploy_manager" {
 
   rule {
     api_groups = ["autoscaling"]
-    resources = ["horizontalpodautoscalers"]
-    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+    resources  = ["horizontalpodautoscalers"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
 
   rule {
     api_groups = ["networking.k8s.io"]
-    resources = ["ingresses"]
-    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+    resources  = ["ingresses"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
 }
 

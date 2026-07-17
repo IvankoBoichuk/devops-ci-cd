@@ -19,7 +19,7 @@ locals {
 }
 
 data "aws_eks_cluster" "eks" {
-  name = local.eks_cluster_name
+  name       = local.eks_cluster_name
   depends_on = [module.eks]
 }
 
@@ -83,21 +83,24 @@ module "eks" {
 }
 
 module "rds" {
-  source              = "./modules/rds"
-  identifier          = local.rds_identifier
-  db_name             = var.rds_db_name
-  username            = var.rds_db_username
-  password            = var.rds_db_password
-  instance_class      = var.rds_instance_class
-  allocated_storage   = var.rds_allocated_storage
-  max_allocated_storage = var.rds_max_allocated_storage
-  subnet_ids          = module.vpc.private_subnet_ids
-  vpc_id              = module.vpc.vpc_id
-  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
-  deletion_protection = var.rds_deletion_protection
-  skip_final_snapshot = var.rds_skip_final_snapshot
+  source                  = "./modules/rds"
+  identifier              = local.rds_identifier
+  use_aurora              = false
+  engine                  = "postgres"
+  engine_version          = "16.4"
+  db_name                 = var.rds_db_name
+  username                = var.rds_db_username
+  password                = var.rds_db_password
+  instance_class          = var.rds_instance_class
+  allocated_storage       = var.rds_allocated_storage
+  max_allocated_storage   = var.rds_max_allocated_storage
+  subnet_ids              = module.vpc.private_subnet_ids
+  vpc_id                  = module.vpc.vpc_id
+  allowed_cidr_blocks     = [module.vpc.vpc_cidr_block]
+  deletion_protection     = var.rds_deletion_protection
+  skip_final_snapshot     = var.rds_skip_final_snapshot
   backup_retention_period = var.rds_backup_retention_period
-  tags                = local.common_tags
+  tags                    = local.common_tags
 }
 
 module "jenkins" {
@@ -108,18 +111,18 @@ module "jenkins" {
 
   bootstrap_pipeline_enabled = true
 
-  pipeline_job_name    = "django-kaniko-pipeline"
-  pipeline_repo_url    = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
-  pipeline_repo_branch = "final-project"
-  pipeline_script_path = "Jenkinsfile"
-  pipeline_ecr_repository  = module.ecr.repository_url
-  pipeline_deploy_repo_url = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
+  pipeline_job_name           = "django-kaniko-pipeline"
+  pipeline_repo_url           = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
+  pipeline_repo_branch        = "final-project"
+  pipeline_script_path        = "ci/Jenkinsfile"
+  pipeline_ecr_repository     = module.ecr.repository_url
+  pipeline_deploy_repo_url    = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
   pipeline_deploy_values_file = "charts/django-app/values.yaml"
-  pipeline_deploy_branch = "final-project"
+  pipeline_deploy_branch      = "final-project"
 
   admin_password = var.jenkins_admin_password
-  git_username = "IvankoBoichuk"
-  git_token    = var.git_token
+  git_username   = "IvankoBoichuk"
+  git_token      = var.git_token
 
   providers = {
     aws        = aws
@@ -131,8 +134,8 @@ module "jenkins" {
 }
 
 module "argo_cd" {
-  source   = "./modules/argo_cd"
-  repo_url = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
+  source             = "./modules/argo_cd"
+  repo_url           = "https://github.com/IvankoBoichuk/devops-ci-cd.git"
   django_db_user     = var.rds_db_username
   django_db_password = var.rds_db_password
   django_secret_key  = var.django_secret_key
